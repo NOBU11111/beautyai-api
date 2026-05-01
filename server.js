@@ -1,4 +1,5 @@
 console.log("server.js started");
+
 import express from "express";
 import OpenAI from "openai";
 import dotenv from "dotenv";
@@ -13,17 +14,19 @@ const client = new OpenAI({
 });
 
 function generateRakutenAffiliateUrl(keyword) {
-  const affiliateId = process.env.RAKUTEN_AFFILIATE_ID;
+  const cleanKeyword = String(keyword || "").trim();
 
-  if (!affiliateId) {
-    console.warn("[Rakuten] RAKUTEN_AFFILIATE_ID is missing");
-    return "https://www.rakuten.co.jp";
-  }
+  const affiliateId =
+    process.env.RAKUTEN_AFFILIATE_ID ||
+    "384c4272.789ff810.384c4273.b29a7259";
 
-  const searchUrl = `https://search.rakuten.co.jp/search/mall/${encodeURIComponent(keyword)}/`;
-  const encodedSearchUrl = encodeURIComponent(searchUrl);
+  const searchUrl = `https://search.rakuten.co.jp/search/mall/${encodeURIComponent(
+    cleanKeyword
+  )}/`;
 
-  return `https://hb.afl.rakuten.co.jp/hgc/${affiliateId}/?pc=${encodedSearchUrl}`;
+  return `https://hb.afl.rakuten.co.jp/hgc/${affiliateId}/?pc=${encodeURIComponent(
+    searchUrl
+  )}&link_type=hybrid_url&ut=eyJwYWdlIjoidXJsIiwidHlwZSI6Imh5YnJpZF91cmwiLCJjb2wiOjF9`;
 }
 
 app.get("/", (req, res) => {
@@ -40,7 +43,7 @@ app.post("/analyze-skin", async (req, res) => {
       rightImageBase64,
       leftImageBase64,
       mode,
-      category
+      category,
     } = req.body;
 
     console.log("[POST /analyze-skin] mode:", mode);
@@ -48,19 +51,19 @@ app.post("/analyze-skin", async (req, res) => {
 
     if (!frontImageBase64 || !rightImageBase64 || !leftImageBase64) {
       return res.status(400).json({
-        error: "frontImageBase64, rightImageBase64, leftImageBase64 が必要です"
+        error: "frontImageBase64, rightImageBase64, leftImageBase64 が必要です",
       });
     }
 
     if (!mode) {
       return res.status(400).json({
-        error: "mode が必要です"
+        error: "mode が必要です",
       });
     }
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY が未設定です"
+        error: "OPENAI_API_KEY が未設定です",
       });
     }
 
@@ -163,7 +166,7 @@ app.post("/analyze-skin", async (req, res) => {
 `;
     } else {
       return res.status(400).json({
-        error: "mode は makeup または skin を指定してください"
+        error: "mode は makeup または skin を指定してください",
       });
     }
 
@@ -181,26 +184,26 @@ app.post("/analyze-skin", async (req, res) => {
               type: "image_url",
               image_url: {
                 url: `data:image/jpeg;base64,${frontImageBase64}`,
-                detail: "low"
-              }
+                detail: "low",
+              },
             },
             {
               type: "image_url",
               image_url: {
                 url: `data:image/jpeg;base64,${rightImageBase64}`,
-                detail: "low"
-              }
+                detail: "low",
+              },
             },
             {
               type: "image_url",
               image_url: {
                 url: `data:image/jpeg;base64,${leftImageBase64}`,
-                detail: "low"
-              }
-            }
-          ]
-        }
-      ]
+                detail: "low",
+              },
+            },
+          ],
+        },
+      ],
     });
 
     console.log("[POST /analyze-skin] OpenAI response received");
@@ -218,20 +221,19 @@ app.post("/analyze-skin", async (req, res) => {
       name: keyword,
       reason: `診断結果に合わせて「${keyword}」で楽天市場の商品を探せます。肌状態や目的に合う商品を比較して選んでください。`,
       amazonUrl: "",
-      rakutenUrl: generateRakutenAffiliateUrl(keyword)
+      rakutenUrl: generateRakutenAffiliateUrl(keyword),
     }));
 
     delete parsed.rakutenSearchKeywords;
 
     res.json(parsed);
-
   } catch (error) {
     console.error("[POST /analyze-skin] error:", error);
 
     res.status(error?.status || 500).json({
       error: error?.error?.message || error?.message || "解析に失敗しました",
       code: error?.code || null,
-      type: error?.type || null
+      type: error?.type || null,
     });
   }
 });
